@@ -352,13 +352,15 @@ def document_role(role_path, playbook_content, generate_graph, no_backup, no_doc
 
     # Render the static template
     if md_role_template:
+        md_role_template = os.path.abspath(md_role_template)
         template_dir = os.path.dirname(md_role_template)
         template_file = os.path.basename(md_role_template)
         env = Environment(loader=FileSystemLoader(template_dir))
         env.filters['type_debug'] = type_debug
         template = env.get_template(template_file)
     else:
-        env = Environment(loader=BaseLoader)
+        template_dir = os.path.dirname(os.path.abspath(__file__))
+        env = Environment(loader=FileSystemLoader(os.path.dirname(os.path.abspath(__file__))))
         env.filters['type_debug'] = type_debug
         template = env.from_string(static_template)
 

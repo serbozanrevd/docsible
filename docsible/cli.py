@@ -298,6 +298,9 @@ def document_role(role_path, playbook_content, generate_graph, no_backup, no_doc
         "argument_specs": argument_specs,
         "ansible_doc": {},
     }
+    # TODO hum, should not be there but the backslah replace in jinja is not working.
+    if "galaxy_info" in role_info["meta"] and "description" in role_info["meta"]["galaxy_info"] and role_info["meta"]["galaxy_info"]["description"]:
+        role_info["meta"]["galaxy_info"]["description"] = role_info["meta"]["galaxy_info"]["description"].replace('\\', '<br class="atl-forced-newline"/>')
 
     if ansible_doc:
         with open(ansible_doc, 'r', encoding='utf-8') as f_in:

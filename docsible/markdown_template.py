@@ -1,4 +1,59 @@
 static_template = """
+{% macro render_repo_link(repo, role_name, file_path, line, repo_type, branch) -%}
+  {%- if repo and file_path and line is not none -%}
+    {%- if role.belongs_to_collection -%}
+      {%- set full_path = 'roles/' ~ role_name ~ '/' ~ file_path -%}
+    {%- else -%}
+      {%- set full_path = file_path -%}
+    {%- endif %}
+    {%- set encoded_path = full_path | replace(' ', '%20') -%}
+
+    {%- if repo_type == 'github' -%}
+      {{ repo }}/blob/{{ branch }}/{{ encoded_path }}#L{{ line }}
+    {%- elif repo_type == 'gitlab' -%}
+      {{ repo }}/-/blob/{{ branch }}/{{ encoded_path }}#L{{ line }}
+    {%- elif repo_type == 'gitea' -%}
+      {{ repo }}/src/branch/{{ branch }}/{{ encoded_path }}#L{{ line }}
+    {%- else -%}
+      {{ repo }}/{{ encoded_path }}#L{{ line }}
+    {%- endif %}
+  {%- else -%}
+    {{ file_path }}#L{{ line }}
+  {%- endif %}
+{%- endmacro %}
+
+{% macro render_arguments_list(arguments, level=0) %}
+{% for arg, details in arguments.items() %}
+  {%- set indent = '  ' * level %}
+  {{ indent }}- **{{ arg }}**
+  {{ indent }}  - **Required**: {{ details.required | default('false') }}
+  {{ indent }}  - **Type**: {{ details.type }}
+  {{ indent }}  - **Default**: {{ details.default | default('none') }}
+  {{ indent }}  - **Description**: {{ details.description | default('No description provided') }}
+  {% if details.choices is defined %}
+    {{ indent }}  - **Choices**:
+    {% for choice in details.choices %}
+      {{ indent }}    - {{ choice }}
+    {% endfor %}
+  {% endif %}
+  {% if details.aliases is defined %}
+    {{ indent }}  - **Aliases**:
+    {% for alias in details.aliases %}
+      {{ indent }}    - {{ alias }}
+    {% endfor %}
+  {% endif %}
+  {% if details.type == 'dict' and details.options %}
+    {{ render_arguments_list(details.options, level + 1) }}
+  {% elif details.type == 'list' and details.elements == 'dict' %}
+    {% for elem in details.default %}
+      {% if elem is mapping %}
+        {{ render_arguments_list(elem, level + 1) }}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+{% endfor %}
+{% endmacro %}
+
 # 📃 Role overview
 
 ## {{ role.name }}
@@ -63,37 +118,6 @@ Description: Not available.
 {%- endif %}
 {%- endif %}
 
-{% macro render_arguments_list(arguments, level=0) %}
-{% for arg, details in arguments.items() %}
-  {%- set indent = '  ' * level %}
-  {{ indent }}- **{{ arg }}**
-  {{ indent }}  - **Required**: {{ details.required | default('false') }}
-  {{ indent }}  - **Type**: {{ details.type }}
-  {{ indent }}  - **Default**: {{ details.default | default('none') }}
-  {{ indent }}  - **Description**: {{ details.description | default('No description provided') }}
-  {% if details.choices is defined %}
-    {{ indent }}  - **Choices**:
-    {% for choice in details.choices %}
-      {{ indent }}    - {{ choice }}
-    {% endfor %}
-  {% endif %}
-  {% if details.aliases is defined %}
-    {{ indent }}  - **Aliases**:
-    {% for alias in details.aliases %}
-      {{ indent }}    - {{ alias }}
-    {% endfor %}
-  {% endif %}
-  {% if details.type == 'dict' and details.options %}
-    {{ render_arguments_list(details.options, level + 1) }}
-  {% elif details.type == 'list' and details.elements == 'dict' %}
-    {% for elem in details.default %}
-      {% if elem is mapping %}
-        {{ render_arguments_list(elem, level + 1) }}
-      {% endif %}
-    {% endfor %}
-  {% endif %}
-{% endfor %}
-{% endmacro %}
 
 {% if role.argument_specs %}
 <details>
@@ -107,28 +131,6 @@ Description: Not available.
 {% else %}
 {% endif %}
 
-{% macro render_repo_link(repo, role_name, file_path, line, repo_type, branch) -%}
-  {%- if repo and file_path and line is not none -%}
-    {%- if role.belongs_to_collection -%}
-      {%- set full_path = 'roles/' ~ role_name ~ '/' ~ file_path -%}
-    {%- else -%}
-      {%- set full_path = file_path -%}
-    {%- endif %}
-    {%- set encoded_path = full_path | replace(' ', '%20') -%}
-
-    {%- if repo_type == 'github' -%}
-      {{ repo }}/blob/{{ branch }}/{{ encoded_path }}#L{{ line }}
-    {%- elif repo_type == 'gitlab' -%}
-      {{ repo }}/-/blob/{{ branch }}/{{ encoded_path }}#L{{ line }}
-    {%- elif repo_type == 'gitea' -%}
-      {{ repo }}/src/branch/{{ branch }}/{{ encoded_path }}#L{{ line }}
-    {%- else -%}
-      {{ repo }}/{{ encoded_path }}#L{{ line }}
-    {%- endif %}
-  {%- else -%}
-    {{ file_path }}#L{{ line }}
-  {%- endif %}
-{%- endmacro %}
 
 {% if role.defaults|length > 0 -%}
 ### Defaults

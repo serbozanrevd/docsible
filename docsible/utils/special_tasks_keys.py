@@ -81,6 +81,12 @@ def process_special_task_keys(task, task_type='task'):
                        if key == "meta"]
         task_module = module_keys[0] if module_keys else 'unknown'
 
+    tasks_notify = task.get("notify", [])
+    if not isinstance(tasks_notify, list):
+        tmp = tasks_notify
+        tasks_notify = []
+        tasks_notify.append(tmp)
+
     tasks.append({
         'name': escape_pipes(task_name),
         'module': task_module if task_module != 'unknown' else '',  # Blank if unknown
@@ -89,5 +95,6 @@ def process_special_task_keys(task, task_type='task'):
         'failed_when': task_failed_when,
         'args': task.get(task_module, {}),
         'vars': task.get("vars", {}),
+        'notify': tasks_notify,
     })
     return tasks

@@ -27,6 +27,10 @@ def type_debug(value):
         return str(type(value)).replace("<class '", "").replace("'>", "")
 
 
+def to_yaml(data):
+    return yaml.dump(data, width=float('inf'))
+
+
 def get_version():
     return "0.7.25"
 
@@ -370,11 +374,13 @@ def document_role(role_path, playbook_content, generate_graph, no_backup, no_doc
         template_file = os.path.basename(md_role_template)
         env = Environment(loader=FileSystemLoader(template_dir))
         env.filters['type_debug'] = type_debug
+        env.filters['to_yaml'] = to_yaml
         template = env.get_template(template_file)
     else:
         template_dir = os.path.dirname(os.path.abspath(__file__))
         env = Environment(loader=FileSystemLoader(os.path.dirname(os.path.abspath(__file__))))
         env.filters['type_debug'] = type_debug
+        env.filters['to_yaml'] = to_yaml
         template = env.from_string(static_template)
 
     new_content = template.render(

@@ -258,6 +258,7 @@ def document_role(role_path, playbook_content, generate_graph, no_backup, no_doc
             git_info.get("branch") if git_info else "main")
         repo_type = repo_type or (
             git_info.get("repository_type") if git_info else None)
+        repo_commit = git_info.get("commit") if git_info else None
 
     role_info = {
         "name": role_name,
@@ -272,7 +273,8 @@ def document_role(role_path, playbook_content, generate_graph, no_backup, no_doc
         "repository": repository_url,
         "repository_type": repo_type,
         "repository_branch": repo_branch,
-        "argument_specs": argument_specs
+        "repo_commit": repo_commit,
+        "argument_specs": argument_specs,
     }
 
     tasks_dir = os.path.join(role_path, "tasks")

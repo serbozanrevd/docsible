@@ -89,6 +89,11 @@ def get_repo_info(path: str | Path) -> Dict[str, str]:
             capture_output=True, text=True, check=True, timeout=timeout
         ).stdout.strip()
 
+        commit = subprocess.run(
+            ["git", "-C", dir_path, "rev-parse", "HEAD"],
+            capture_output=True, text=True, check=True, timeout=timeout
+        ).stdout.strip()
+
     except subprocess.TimeoutExpired as e:
         raise GitTimeoutError(f"Git command timed out for path: {dir_path}") from e
     except subprocess.CalledProcessError as e:
@@ -114,4 +119,5 @@ def get_repo_info(path: str | Path) -> Dict[str, str]:
         "repository": repository_url,
         "branch": branch,
         "repository_type": repo_type,
+        "commit": commit,
     }

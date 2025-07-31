@@ -16,6 +16,16 @@ DOCSIBLE_END_TAG = "<!-- DOCSIBLE END -->"
 timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
 
 
+def type_debug(value):
+    """Added the type operator to the jinja2
+    """
+    try:
+        return value.__class__.__name__
+    except Exception as e:
+        print(str(type(e)) + " " + str(e))
+        return str(type(value)).replace("<class '", "").replace("'>", "")
+
+
 def get_version():
     return "0.7.25"
 
@@ -345,10 +355,13 @@ def document_role(role_path, playbook_content, generate_graph, no_backup, no_doc
         template_dir = os.path.dirname(md_role_template)
         template_file = os.path.basename(md_role_template)
         env = Environment(loader=FileSystemLoader(template_dir))
+        env.filters['type_debug'] = type_debug
         template = env.get_template(template_file)
     else:
         env = Environment(loader=BaseLoader)
+        env.filters['type_debug'] = type_debug
         template = env.from_string(static_template)
+
     new_content = template.render(
         role=role_info, mermaid_code_per_file=mermaid_code_per_file)
     new_content = manage_docsible_tags(new_content)

@@ -51,6 +51,7 @@ def process_special_task_keys(task, task_type='task'):
     # Handle regular tasks
     task_name = task.get('name', 'Unnamed')
     task_when = escape_pipes(task.get('when', None))
+    task_failed_when = escape_pipes(task.get('failed_when', None))
 
     # Determine module name based on known task indicators or default to 'unknown'
     task_module = 'unknown'  # Default module if not found
@@ -74,10 +75,19 @@ def process_special_task_keys(task, task_type='task'):
                        if key not in known_task_params and not key.startswith('with_')]
         task_module = module_keys[0] if module_keys else 'unknown'
 
+    # catching the meta handlers
+    if task_module == 'unknown':
+        module_keys = [task[key] for key in task.keys()
+                       if key == "meta"]
+        task_module = module_keys[0] if module_keys else 'unknown'
+
     tasks.append({
         'name': escape_pipes(task_name),
         'module': task_module if task_module != 'unknown' else '',  # Blank if unknown
         'type': task_type,
-        'when': task_when
+        'when': task_when,
+        'failed_when': task_failed_when,
+        'args': task.get(task_module, {}),
+        'vars': task.get("vars", {}),
     })
     return tasks

@@ -1,6 +1,7 @@
 # Import libraries
 import os
 import yaml
+import json
 import click
 from shutil import copyfile
 from datetime import datetime
@@ -196,6 +197,7 @@ def document_collection_roles(collection_path, playbook, graph, no_backup, no_do
 @click.option('--repository-url', '-ru', default=None, help='Repository base URL (used for standalone roles)')
 @click.option('--repo-type', '-rt', default=None, help='Repository type: github, gitlab, gitea, etc.')
 @click.option('--repo-branch', '-rb', default=None, help='Repository branch name (e.g., main or master)')
+@click.option('--ansible_doc', default=None, help='Path to the file generated with ansible-doc --list --json.')
 @click.version_option(version=get_version(), help=f"Show the module version. Actual is {get_version()}")
 def doc_the_role(role, collection, playbook, graph, no_backup, no_docsible, comments, task_line, md_collection_template, md_role_template, append, output, repository_url, repo_type, repo_branch):
     if collection:
@@ -211,6 +213,11 @@ def doc_the_role(role, collection, playbook, graph, no_backup, no_docsible, comm
             print(f"Folder {role_path} does not exist.")
             return
 
+        if ansible_doc:
+            if not os.path.exists(ansible_doc):
+                print(f"File {ansible_doc} does not exist.")
+                return
+
         if playbook == 'tests/test.yml':
             playbook = os.path.join(role_path, playbook)
 
@@ -224,12 +231,12 @@ def doc_the_role(role, collection, playbook, graph, no_backup, no_docsible, comm
             except Exception as e:
                 print('playbook import error:', e)
         document_role(role_path, playbook_content, graph, no_backup, no_docsible, comments, task_line, md_role_template, belongs_to_collection=False,
-                      append=append, output=output, repository_url=repository_url, repo_type=repo_type, repo_branch=repo_branch)
+                      append=append, output=output, repository_url=repository_url, repo_type=repo_type, repo_branch=repo_branch, ansible_doc=ansible_doc)
     else:
         print("Please specify either a role or a collection path.")
 
 
-def document_role(role_path, playbook_content, generate_graph, no_backup, no_docsible, comments, task_line, md_role_template, belongs_to_collection, append, output, repository_url, repo_type, repo_branch):
+def document_role(role_path, playbook_content, generate_graph, no_backup, no_docsible, comments, task_line, md_role_template, belongs_to_collection, append, output, repository_url, repo_type, repo_branch, ansible_doc):
     role_name = os.path.basename(role_path)
     readme_path = os.path.join(role_path, output)
     meta_path = os.path.join(role_path, "meta", "main.yml")
@@ -285,7 +292,13 @@ def document_role(role_path, playbook_content, generate_graph, no_backup, no_doc
         "repository_branch": repo_branch,
         "repo_commit": repo_commit,
         "argument_specs": argument_specs,
+        "ansible_doc": {},
     }
+
+    if ansible_doc:
+        with open(ansible_doc, 'r', encoding='utf-8') as f_in:
+            ansible_doc_content = json.load(f_in)
+        role_info["ansible_doc"] = ansible_doc_content
 
     tasks_dir = os.path.join(role_path, "tasks")
     role_info["tasks"] = []

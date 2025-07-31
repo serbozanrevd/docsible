@@ -235,7 +235,7 @@ Description: Not available.
 
 ### Tasks
 
-{% for taskfile in role.tasks|sort(attribute='file') %}
+{% for taskfile in role.tasks %}
 #### File: tasks/{{ taskfile.file }}
 {% set ns = namespace (tags_required = false, comments_required = false) %}
 {%- for t in taskfile['mermaid'] %}

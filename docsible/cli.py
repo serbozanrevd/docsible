@@ -281,37 +281,50 @@ def document_role(role_path, playbook_content, generate_graph, no_backup, no_doc
     role_info["tasks"] = []
 
     if os.path.exists(tasks_dir) and os.path.isdir(tasks_dir):
+        list_of_task_file = []
+        task_main = None
         for dirpath, dirnames, filenames in os.walk(tasks_dir):
             for task_file in filenames:
                 if task_file.endswith(".yml") or task_file.endswith(".yaml"):
                     file_path = os.path.join(dirpath, task_file)
-                    tasks_data = load_yaml_generic(file_path)
-                    if tasks_data:
-                        relative_path = os.path.relpath(file_path, tasks_dir)
-                        task_info = {'file': relative_path,
-                                     'tasks': [], 'mermaid': [], "comments": [], 'lines': []}
-                        if comments:
-                            task_info['comments'] = get_task_comments(
-                                file_path)
-                        if task_line:
-                            task_info['lines'] = get_task_line_numbers(
-                                file_path)
-                        if not isinstance(tasks_data, list):
-                            print(
-                                f"Unexpected data type for tasks in {task_file}. Skipping.")
-                            continue
-                        for task in tasks_data:
-                            if not isinstance(task, dict):
-                                print(
-                                    f"Skipping unexpected data in {task_file}: {task}")
-                                continue
-                            if task and len(task.keys()) > 0:
-                                processed_tasks = process_special_task_keys(
-                                    task)
-                                task_info['tasks'].extend(processed_tasks)
-                                task_info['mermaid'].extend([task])
+                    list_of_task_file.append(file_path)
+                    if task_file == "main.yml":
+                        task_main = file_path
 
-                        role_info["tasks"].append(task_info)
+        # sort the task file, but keep the main on top, as this is the entry point of the role.
+        list_of_task_file = sorted(list_of_task_file)
+        if task_main:
+            list_of_task_file.remove(task_main)
+            list_of_task_file.insert(0, task_main)
+
+        for file_path in list_of_task_file:
+            tasks_data = load_yaml_generic(file_path)
+            if tasks_data:
+                relative_path = os.path.relpath(file_path, tasks_dir)
+                task_info = {'file': relative_path,
+                             'tasks': [], 'mermaid': [], "comments": [], 'lines': []}
+                if comments:
+                    task_info['comments'] = get_task_comments(
+                        file_path)
+                if task_line:
+                    task_info['lines'] = get_task_line_numbers(
+                        file_path)
+                if not isinstance(tasks_data, list):
+                    print(
+                        f"Unexpected data type for tasks in {task_file}. Skipping.")
+                    continue
+                for task in tasks_data:
+                    if not isinstance(task, dict):
+                        print(
+                            f"Skipping unexpected data in {task_file}: {task}")
+                        continue
+                    if task and len(task.keys()) > 0:
+                        processed_tasks = process_special_task_keys(
+                            task)
+                        task_info['tasks'].extend(processed_tasks)
+                        task_info['mermaid'].extend([task])
+
+                role_info["tasks"].append(task_info)
 
     if os.path.exists(readme_path):
         if not no_backup:

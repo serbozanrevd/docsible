@@ -202,8 +202,9 @@ def document_collection_roles(collection_path, playbook, graph, no_backup, no_do
 @click.option('--repo-type', '-rt', default=None, help='Repository type: github, gitlab, gitea, etc.')
 @click.option('--repo-branch', '-rb', default=None, help='Repository branch name (e.g., main or master)')
 @click.option('--ansible_doc', default=None, help='Path to the file generated with ansible-doc --list --json.')
+@click.option('--verbose', '-v', is_flag=True, help='Verbose.')
 @click.version_option(version=get_version(), help=f"Show the module version. Actual is {get_version()}")
-def doc_the_role(role, collection, playbook, graph, no_backup, no_docsible, comments, task_line, md_collection_template, md_role_template, append, output, repository_url, repo_type, repo_branch):
+def doc_the_role(role, collection, playbook, graph, no_backup, no_docsible, comments, task_line, md_collection_template, md_role_template, append, output, repository_url, repo_type, repo_branch, ansible_doc, verbose):
     if collection:
         collection_path = os.path.abspath(collection)
         if not os.path.exists(collection_path) or not os.path.isdir(collection_path):
@@ -235,12 +236,12 @@ def doc_the_role(role, collection, playbook, graph, no_backup, no_docsible, comm
             except Exception as e:
                 print('playbook import error:', e)
         document_role(role_path, playbook_content, graph, no_backup, no_docsible, comments, task_line, md_role_template, belongs_to_collection=False,
-                      append=append, output=output, repository_url=repository_url, repo_type=repo_type, repo_branch=repo_branch, ansible_doc=ansible_doc)
+                      append=append, output=output, repository_url=repository_url, repo_type=repo_type, repo_branch=repo_branch, ansible_doc=ansible_doc, verbose=verbose)
     else:
         print("Please specify either a role or a collection path.")
 
 
-def document_role(role_path, playbook_content, generate_graph, no_backup, no_docsible, comments, task_line, md_role_template, belongs_to_collection, append, output, repository_url, repo_type, repo_branch, ansible_doc):
+def document_role(role_path, playbook_content, generate_graph, no_backup, no_docsible, comments, task_line, md_role_template, belongs_to_collection, append, output, repository_url, repo_type, repo_branch, ansible_doc, verbose):
     role_name = os.path.basename(role_path)
     readme_path = os.path.join(role_path, output)
     meta_path = os.path.join(role_path, "meta", "main.yml")
@@ -349,8 +350,12 @@ def document_role(role_path, playbook_content, generate_graph, no_backup, no_doc
                             f"Skipping unexpected data in {task_file}: {task}")
                         continue
                     if task and len(task.keys()) > 0:
+                        if verbose:
+                            print(task)
                         processed_tasks = process_special_task_keys(
                             task)
+                        if verbose:
+                            print(processed_tasks)
                         task_info['tasks'].extend(processed_tasks)
                         task_info['mermaid'].extend([task])
 

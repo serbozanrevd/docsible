@@ -1,6 +1,6 @@
 static_template = """
 {% macro render_repo_link(repo, role_name, file_path, line, repo_type, branch) -%}
-  {%- if repo and file_path and line is not none -%}
+  {%- if repo and file_path and line is not none and line -%}
     {%- if role.belongs_to_collection -%}
       {%- set full_path = 'roles/' ~ role_name ~ '/' ~ file_path -%}
     {%- else -%}
@@ -16,11 +16,41 @@ static_template = """
       {{ repo }}/src/branch/{{ branch }}/{{ encoded_path }}#L{{ line }}
     {%- else -%}
       {{ repo }}/{{ encoded_path }}#L{{ line }}
-    {%- endif %}
+    {%- endif -%}
+  {%- elif repo and not file_path and not line -%}
+    {%- set full_path = 'roles/' ~ role_name -%}
+    {%- set encoded_path = full_path | replace(' ', '%20') -%}
+
+    {%- if repo_type == 'github' -%}
+      {{ repo }}/blob/{{ branch }}/{{ encoded_path }}
+    {%- elif repo_type == 'gitlab' -%}
+      {{ repo }}/-/blob/{{ branch }}/{{ encoded_path }}
+    {%- elif repo_type == 'gitea' -%}
+      {{ repo }}/src/branch/{{ branch }}/{{ encoded_path }}
+    {%- else -%}
+      {{ repo }}/{{ encoded_path }}
+    {%- endif -%}
+  {%- elif repo and role_name and file_path and not line -%}
+    {%- if 'roles/' ~ role_name ~ '/' in file_path -%}
+    {%- set full_path = file_path -%}
+    {%- else -%}
+    {%- set full_path = 'roles/' ~ role_name ~ '/' ~ file_path -%}
+    {%- endif -%}
+    {%- set encoded_path = full_path | replace(' ', '%20') -%}
+
+    {%- if repo_type == 'github' -%}
+      {{ repo }}/blob/{{ branch }}/{{ encoded_path }}
+    {%- elif repo_type == 'gitlab' -%}
+      {{ repo }}/-/blob/{{ branch }}/{{ encoded_path }}
+    {%- elif repo_type == 'gitea' -%}
+      {{ repo }}/src/branch/{{ branch }}/{{ encoded_path }}
+    {%- else -%}
+      {{ repo }}/{{ encoded_path }}
+    {%- endif -%}
   {%- else -%}
     {{ file_path }}#L{{ line }}
-  {%- endif %}
-{%- endmacro %}
+  {%- endif -%}
+{%- endmacro -%}
 
 {% macro render_arguments_list(arguments, level=0) %}
 {% for arg, details in arguments.items() %}
@@ -118,6 +148,9 @@ Description: Not available.
 {%- endif %}
 {%- endif %}
 
+The role is versionned on the {{ role.repository_type }} repository available at {{ render_repo_link(role.repository, role.name, '', '', role.repository_type, role.repository_branch) }}.
+
+This documentation was generated at the following commit: {{ role.repo_commit }}.
 
 {% if role.argument_specs %}
 <details>

@@ -52,6 +52,7 @@ def process_special_task_keys(task, task_type='task'):
     task_name = task.get('name', 'Unnamed')
     task_when = escape_pipes(task.get('when', None))
     task_failed_when = escape_pipes(task.get('failed_when', None))
+    tasks_register = task.get('register', None)
 
     # Determine module name based on known task indicators or default to 'unknown'
     task_module = 'unknown'  # Default module if not found
@@ -96,5 +97,6 @@ def process_special_task_keys(task, task_type='task'):
         'args': task.get(task_module, {}),
         'vars': task.get("vars", {}),
         'notify': tasks_notify,
+        'register': tasks_register,
     })
     return tasks

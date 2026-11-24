@@ -3,6 +3,7 @@ import pytest
 from jinja2 import Environment, BaseLoader
 from docsible.utils.yaml import load_yaml_file_custom, get_multiline_indicator
 from docsible.markdown_template import static_template, collection_template
+from docsible.cli import type_debug, to_yaml
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "multiline_fixture.yml"
 
@@ -47,8 +48,8 @@ def test_get_multiline_indicator():
 
 
 def test_render_static_template_with_multiline_values():
-    env = Environment(loader=BaseLoader)
-    template = env.from_string(static_template)
+    env = Environment(loader=BaseLoader)  # replaced below after role_info built
+    template = None  # placeholder
 
     raw_data = load_yaml_file_custom(str(FIXTURE_PATH))
 
@@ -81,9 +82,15 @@ def test_render_static_template_with_multiline_values():
         "repository": None,
         "repository_type": None,
         "repository_branch": "main",
+        "repo_commit": None,
+        "ansible_doc": {},
         "argument_specs": None
     }
 
+    env = Environment(loader=BaseLoader)
+    env.filters['type_debug'] = type_debug
+    env.filters['to_yaml'] = to_yaml
+    template = env.from_string(static_template)
     rendered = template.render(role=role_info, mermaid_code_per_file={})
 
     # Verify that in all Markdown table rows (| ... |), there are no embedded newlines
@@ -140,9 +147,15 @@ def test_render_collection_template_with_multiline_values():
         "repository": None,
         "repository_type": None,
         "repository_branch": "main",
+        "repo_commit": None,
+        "ansible_doc": {},
         "argument_specs": None
     }
 
+    env_col = Environment(loader=BaseLoader)
+    env_col.filters['type_debug'] = type_debug
+    env_col.filters['to_yaml'] = to_yaml
+    template = env_col.from_string(collection_template)
     rendered = template.render(collection=collection_metadata, roles=[role_info])
 
     lines = rendered.splitlines()

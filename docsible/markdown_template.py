@@ -1,131 +1,6 @@
 static_template = """
-# 📃 Role overview
-
-## {{ role.name }}
-
-{% if role.belongs_to_collection -%}
-```
-Role belongs to {{ role.belongs_to_collection.namespace }}/{{ role.belongs_to_collection.name }}
-Namespace - {{ role.belongs_to_collection.namespace }}
-Collection - {{ role.belongs_to_collection.name }}
-Version - {{ role.belongs_to_collection.version }}
-Repository - {{ role.belongs_to_collection.repository }}
-```
-{%- endif %}
-
-{% if role.meta and role.meta.galaxy_info -%}
-{%- if role.meta.galaxy_info.description and (role.meta.galaxy_info.description is not string and role.meta.galaxy_info.description is not mapping) -%}
-Description:
-{% for role_desc in role.meta.galaxy_info.description -%}
-  - {{ role_desc }}
-{% endfor -%}
-{%- else -%}
-Description: {{ role.meta.galaxy_info.description or 'Not available.' }}
-{%- endif %}
-{%- endif %}
-
-{% if role.docsible -%}
-| Field                | Value           |
-|--------------------- |-----------------|
-{%- if role.docsible.description %}
-| Functional description | {{ role.docsible.description | replace('\r\n', ' ') | replace('\n', ' ') | replace('\r', ' ') | replace('|', '¦') }} |
-{%- endif %}
-{%- if role.docsible.requester %}
-| Requester            | {{ role.docsible.requester | replace('\r\n', ' ') | replace('\n', ' ') | replace('\r', ' ') | replace('|', '¦') }} |
-{%- endif %}
-{%- if role.docsible.users %}
-| Users                | {{ role.docsible.users | replace('\r\n', ' ') | replace('\n', ' ') | replace('\r', ' ') | replace('|', '¦') }} |
-{%- endif %}
-{%- if role.docsible.dt_dev %}
-| Date dev             | {{ role.docsible.dt_dev }} |
-{%- endif %}
-{%- if role.docsible.dt_prod %}
-| Date prod            | {{ role.docsible.dt_prod }} |
-{%- endif %}
-{%- if role.docsible.dt_update %}
-| Readme update        | {{ role.docsible.dt_update }} |
-{%- endif %}
-{%- if role.docsible.version %}
-| Version              | {{ role.docsible.version | replace('\r\n', ' ') | replace('\n', ' ') | replace('\r', ' ') | replace('|', '¦') }} |
-{%- endif %}
-{%- if role.docsible.time_saving %}
-| Time Saving          | {{ role.docsible.time_saving | replace('\r\n', ' ') | replace('\n', ' ') | replace('\r', ' ') | replace('|', '¦') }} |
-{%- endif %}
-{%- if role.docsible.category %}
-| Category             | {{ role.docsible.category | replace('\r\n', ' ') | replace('\n', ' ') | replace('\r', ' ') | replace('|', '¦') }} |
-{%- endif %}
-{%- if role.docsible.subCategory %}
-| Sub category         | {{ role.docsible.subCategory | replace('\r\n', ' ') | replace('\n', ' ') | replace('\r', ' ') | replace('|', '¦') }} |
-{%- endif %}
-{%- if role.docsible.aap_hub %}
-| AAP Hub              | {{ role.docsible.aap_hub }} |
-{%- endif %}
-{%- if role.docsible.automation_kind %}
-| Automation Kind      | {{ role.docsible.automation_kind | replace('\r\n', ' ') | replace('\n', ' ') | replace('\r', ' ') | replace('|', '¦') }} |
-{%- endif %}
-{%- if role.docsible.critical %}
-| Critical ⚠️          | {{ role.docsible.critical }} |
-{%- endif %}
-{%- endif %}
-
-{% macro render_arguments_list(arguments, level=0) %}
-{% for arg, details in arguments.items() %}
-  {%- set indent = '  ' * level %}
-  {{ indent }}- **{{ arg }}**
-  {{ indent }}  - **Required**: {{ details.required | default('false') }}
-  {{ indent }}  - **Type**: {{ details.type }}
-  {{ indent }}  - **Default**: {{ details.default | default('none') }}
-  {% if details.description is iterable and (details.description is not string and details.description is not mapping) -%}
-  {{ indent }}  - **Description**: 
-  {% for details_desc in details.description -%}
-      {{ indent }} - {{ details_desc }}
-  {% endfor -%}
-  {% else %}
-  {{ indent }}  - **Description**: {{ details.description | default('No description provided') }}
-  {%- endif %}
-  {% if details.choices is defined %}
-    {{ indent }}  - **Choices**:
-    {% for choice in details.choices %}
-      {{ indent }}    - {{ choice }}
-    {% endfor %}
-  {% endif %}
-  {% if details.aliases is defined %}
-    {{ indent }}  - **Aliases**:
-    {% for alias in details.aliases %}
-      {{ indent }}    - {{ alias }}
-    {% endfor %}
-  {% endif %}
-  {% if (details.type == 'dict' and details.options) or (details.type == 'list' and details.elements == 'dict' and details.options) %}
-    {{ render_arguments_list(details.options, level + 1) }}
-  {% endif %}
-{% endfor %}
-{% endmacro %}
-
-{% if role.argument_specs %}
-<details>
-<summary><b>🧩 Argument Specifications in meta/argument_specs</b></summary>
-{% for section, specs in role.argument_specs.argument_specs.items() %}
-#### Key: {{ section }}
-{% if specs.description is iterable and (specs.description is not string and specs.description is not mapping) %}
-**Description**: 
-{% for desc in specs.description -%}
-  - {{ desc }}
-{% endfor -%}
-{% else %}
-**Description**: {{ specs.description or specs.short_description or 'No description provided' }}
-{%- endif %}
-
-{% if specs.options is defined -%}
-**Options**:
-{{ render_arguments_list(specs.options) }}
-{%- endif %}
-{% endfor %}
-</details>
-{% else %}
-{% endif %}
-
 {% macro render_repo_link(repo, role_name, file_path, line, repo_type, branch) -%}
-  {%- if repo and file_path and line is not none -%}
+  {%- if repo and file_path and line is not none and line -%}
     {%- if role.belongs_to_collection -%}
       {%- set full_path = 'roles/' ~ role_name ~ '/' ~ file_path -%}
     {%- else -%}
@@ -141,11 +16,154 @@ Description: {{ role.meta.galaxy_info.description or 'Not available.' }}
       {{ repo }}/src/branch/{{ branch }}/{{ encoded_path }}#L{{ line }}
     {%- else -%}
       {{ repo }}/{{ encoded_path }}#L{{ line }}
-    {%- endif %}
+    {%- endif -%}
+  {%- elif repo and not file_path and not line -%}
+    {%- set full_path = 'roles/' ~ role_name -%}
+    {%- set encoded_path = full_path | replace(' ', '%20') -%}
+
+    {%- if repo_type == 'github' -%}
+      {{ repo }}/blob/{{ branch }}/{{ encoded_path }}
+    {%- elif repo_type == 'gitlab' -%}
+      {{ repo }}/-/blob/{{ branch }}/{{ encoded_path }}
+    {%- elif repo_type == 'gitea' -%}
+      {{ repo }}/src/branch/{{ branch }}/{{ encoded_path }}
+    {%- else -%}
+      {{ repo }}/{{ encoded_path }}
+    {%- endif -%}
+  {%- elif repo and role_name and file_path and not line -%}
+    {%- if 'roles/' ~ role_name ~ '/' in file_path -%}
+    {%- set full_path = file_path -%}
+    {%- else -%}
+    {%- set full_path = 'roles/' ~ role_name ~ '/' ~ file_path -%}
+    {%- endif -%}
+    {%- set encoded_path = full_path | replace(' ', '%20') -%}
+
+    {%- if repo_type == 'github' -%}
+      {{ repo }}/blob/{{ branch }}/{{ encoded_path }}
+    {%- elif repo_type == 'gitlab' -%}
+      {{ repo }}/-/blob/{{ branch }}/{{ encoded_path }}
+    {%- elif repo_type == 'gitea' -%}
+      {{ repo }}/src/branch/{{ branch }}/{{ encoded_path }}
+    {%- else -%}
+      {{ repo }}/{{ encoded_path }}
+    {%- endif -%}
   {%- else -%}
     {{ file_path }}#L{{ line }}
-  {%- endif %}
-{%- endmacro %}
+  {%- endif -%}
+{%- endmacro -%}
+
+{% macro render_arguments_list(arguments, level=0) %}
+{% for arg, details in arguments.items() %}
+  {%- set indent = '  ' * level %}
+  {{ indent }}- **{{ arg }}**
+  {{ indent }}  - **Required**: {{ details.required | default('false') }}
+  {{ indent }}  - **Type**: {{ details.type }}
+  {{ indent }}  - **Default**: {{ details.default | default('none') }}
+  {{ indent }}  - **Description**: {{ details.description | default('No description provided') }}
+  {% if details.choices is defined %}
+    {{ indent }}  - **Choices**:
+    {% for choice in details.choices %}
+      {{ indent }}    - {{ choice }}
+    {% endfor %}
+  {% endif %}
+  {% if details.aliases is defined %}
+    {{ indent }}  - **Aliases**:
+    {% for alias in details.aliases %}
+      {{ indent }}    - {{ alias }}
+    {% endfor %}
+  {% endif %}
+  {% if details.type == 'dict' and details.options %}
+    {{ render_arguments_list(details.options, level + 1) }}
+  {% elif details.type == 'list' and details.elements == 'dict' %}
+    {% for elem in details.default %}
+      {% if elem is mapping %}
+        {{ render_arguments_list(elem, level + 1) }}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+{% endfor %}
+{% endmacro %}
+
+# 📃 Role overview
+
+## {{ role.name }}
+
+{% if role.belongs_to_collection -%}
+```
+Role belongs to {{ role.belongs_to_collection.namespace }}/{{ role.belongs_to_collection.name }}
+Namespace - {{ role.belongs_to_collection.namespace }}
+Collection - {{ role.belongs_to_collection.name }}
+Version - {{ role.belongs_to_collection.version }}
+Repository - {{ role.belongs_to_collection.repository }}
+```
+{%- endif %}
+
+{% if role.meta and role.meta.galaxy_info -%}
+Description: {{ role.meta.galaxy_info.description or 'Not available.' }}
+{% else %}
+Description: Not available.
+{%- endif %}
+
+{% if role.docsible -%}
+| Field                | Value           |
+|--------------------- |-----------------|
+{%- if role.docsible.description %}
+| Functional description | {{ role.docsible.description }} |
+{%- endif %}
+{%- if role.docsible.requester %}
+| Requester            | {{ role.docsible.requester }} |
+{%- endif %}
+{%- if role.docsible.users %}
+| Users                | {{ role.docsible.users }} |
+{%- endif %}
+{%- if role.docsible.dt_dev %}
+| Date dev             | {{ role.docsible.dt_dev }} |
+{%- endif %}
+{%- if role.docsible.dt_prod %}
+| Date prod            | {{ role.docsible.dt_prod }} |
+{%- endif %}
+{%- if role.docsible.dt_update %}
+| Readme update        | {{ role.docsible.dt_update }} |
+{%- endif %}
+{%- if role.docsible.version %}
+| Version              | {{ role.docsible.version }} |
+{%- endif %}
+{%- if role.docsible.time_saving %}
+| Time Saving          | {{ role.docsible.time_saving }} |
+{%- endif %}
+{%- if role.docsible.category %}
+| Category             | {{ role.docsible.category }} |
+{%- endif %}
+{%- if role.docsible.subCategory %}
+| Sub category         | {{ role.docsible.subCategory }} |
+{%- endif %}
+{%- if role.docsible.aap_hub %}
+| AAP Hub              | {{ role.docsible.aap_hub }} |
+{%- endif %}
+{%- if role.docsible.automation_kind %}
+| Automation Kind      | {{ role.docsible.automation_kind }} |
+{%- endif %}
+{%- if role.docsible.critical %}
+| Critical ⚠️          | {{ role.docsible.critical }} |
+{%- endif %}
+{%- endif %}
+
+The role is versionned on the {{ role.repository_type }} repository available at {{ render_repo_link(role.repository, role.name, '', '', role.repository_type, role.repository_branch) }}.
+
+This documentation was generated at the following commit: {{ role.repo_commit }}.
+
+{% if role.argument_specs %}
+<details>
+<summary><b>🧩 Argument Specifications in meta/argument_specs</b></summary>
+{% for section, specs in role.argument_specs.argument_specs.items() %}
+#### Key: {{ section }}
+**Description**: {{ specs.description or specs.short_description or 'No description provided' }}
+{{ render_arguments_list(specs.options) }}
+{% endfor %}
+</details>
+{% else %}
+{% endif %}
+
 
 {% if role.defaults|length > 0 -%}
 ### Defaults
@@ -250,7 +268,7 @@ Description: {{ role.meta.galaxy_info.description or 'Not available.' }}
 
 ### Tasks
 
-{% for taskfile in role.tasks|sort(attribute='file') %}
+{% for taskfile in role.tasks %}
 #### File: tasks/{{ taskfile.file }}
 {% set ns = namespace (tags_required = false, comments_required = false) %}
 {%- for t in taskfile['mermaid'] %}
@@ -263,9 +281,9 @@ Description: {{ role.meta.galaxy_info.description or 'Not available.' }}
 | ---- | ------ | -------------- |{% if ns.tags_required %} -----|{% endif %}{% if ns.comments_required %} -------- |{% endif %}
 {%- for task in taskfile.tasks %}
 {%- if taskfile['lines'] | length > 0 %}
-| [{{ task.name.replace("|", "¦").replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ') }}]({{ render_repo_link(role.repository, role.name, 'tasks/' ~ taskfile.file, taskfile['lines'][task.name], role.repository_type, role.repository_branch) }}) | {{ task.module }} | {{ 'True' if task.when else 'False' }} |{% if ns.tags_required %} {{ taskfile['mermaid'] | selectattr('name', 'equalto', task.name) | map(attribute='tags') | list | first | join(',') }} |{% endif %}{% if ns.comments_required %} {{ taskfile['comments'] | selectattr('task_name', 'equalto', task.name) | map(attribute='task_comments') | join | replace('\r\n', '<br>') | replace('\n', '<br>') | replace('\r', '<br>') | replace('|', '¦') }} |{% endif %}
+| [{{ task.name.replace("|", "¦") }}]({{ render_repo_link(role.repository, role.name, 'tasks/' ~ taskfile.file, taskfile['lines'][task.name], role.repository_type, role.repository_branch) }}) | {{ task.module }} | {{ 'True' if task.when else 'False' }} |{% if ns.tags_required %} {{ taskfile['mermaid'] | selectattr('name', 'equalto', task.name) | map(attribute='tags') | list | first | join(',') }} |{% endif %}{% if ns.comments_required %} {{ taskfile['comments'] | selectattr('task_name', 'equalto', task.name) | map(attribute='task_comments') | join }} |{% endif %}
 {%- else %}
-| {{ task.name.replace("|", "¦").replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ') }} | {{ task.module }} | {{ 'True' if task.when else 'False' }} |{% if ns.tags_required %} {{ taskfile['mermaid'] | selectattr('name', 'equalto', task.name) | map(attribute='tags') | list | first | join(',') }} |{% endif %}{% if ns.comments_required %} {{ taskfile['comments'] | selectattr('task_name', 'equalto', task.name) | map(attribute='task_comments') | join | replace('\r\n', '<br>') | replace('\n', '<br>') | replace('\r', '<br>') | replace('|', '¦') }} |{% endif %}
+| {{ task.name.replace("|", "¦") }} | {{ task.module }} | {{ 'True' if task.when else 'False' }} |{% if ns.tags_required %} {{ taskfile['mermaid'] | selectattr('name', 'equalto', task.name) | map(attribute='tags') | list | first | join(',') }} |{% endif %}{% if ns.comments_required %} {{ taskfile['comments'] | selectattr('task_name', 'equalto', task.name) | map(attribute='task_comments') | join }} |{% endif %}
 {%- endif %}
 {%- endfor %}
 {% endfor %}
@@ -273,7 +291,7 @@ Description: {{ role.meta.galaxy_info.description or 'Not available.' }}
 {% if mermaid_code_per_file -%}
 ## Task Flow Graphs
 
-{% for task_file, mermaid_code in mermaid_code_per_file | dictsort %}
+{% for task_file, mermaid_code in mermaid_code_per_file.items() %}
 
 ### Graph for {{ task_file }}
 
@@ -432,14 +450,7 @@ Description: Not available.
   {{ indent }}  - **Required**: {{ details.required | default('false') }}
   {{ indent }}  - **Type**: {{ details.type }}
   {{ indent }}  - **Default**: {{ details.default | default('none') }}
-  {% if details.description is iterable and (details.description is not string and details.description is not mapping) -%}
-  {{ indent }}  - **Description**: 
-  {% for details_desc in details.description -%}
-      {{ indent }} - {{ details_desc }}
-  {% endfor %}
-  {% else %}
   {{ indent }}  - **Description**: {{ details.description | default('No description provided') }}
-  {% endif %}
   {% if details.choices is defined %}
     {{ indent }}  - **Choices**:
     {% for choice in details.choices %}

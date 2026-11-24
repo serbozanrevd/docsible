@@ -1,5 +1,6 @@
 # Import libraries
 import os
+import json
 import yaml
 import click
 from shutil import copyfile
@@ -14,6 +15,17 @@ from docsible.utils.git import get_repo_info
 DOCSIBLE_START_TAG = "<!-- DOCSIBLE START -->"
 DOCSIBLE_END_TAG = "<!-- DOCSIBLE END -->"
 timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+
+
+def type_debug(value):
+    try:
+        return value.__class__.__name__
+    except Exception:
+        return str(type(value)).replace("<class '", "").replace("'>", "")
+
+
+def to_yaml(data):
+    return yaml.dump(data, width=float('inf'))
 
 
 def get_version():
@@ -108,7 +120,7 @@ def render_readme_template(collection_metadata, md_collection_template, roles_in
     print(f"Collection README.md written at: {output_path}")
 
 
-def document_collection_roles(collection_path, playbook, graph, no_backup, no_docsible, comments, task_line, md_collection_template, md_role_template, append, output, repository_url, repo_type, repo_branch):
+def document_collection_roles(collection_path, playbook, graph, no_backup, no_docsible, comments, task_line, md_collection_template, md_role_template, append, output, repository_url, repo_type, repo_branch, ansible_doc=None):
     """
     Document all roles in a collection, extracting metadata from galaxy.yml or galaxy.yaml.
     """
@@ -163,7 +175,7 @@ def document_collection_roles(collection_path, playbook, graph, no_backup, no_do
                             except Exception as e:
                                 print(f'{playbook} import for {role} error:', e)
                         role_info = document_role(role_path, playbook_content, graph, no_backup, no_docsible, comments, task_line, md_role_template,
-                                                  belongs_to_collection=collection_metadata, append=append, output=output, repository_url=repository_url, repo_type=repo_type, repo_branch=repo_branch)
+                                                  belongs_to_collection=collection_metadata, append=append, output=output, repository_url=repository_url, repo_type=repo_type, repo_branch=repo_branch, ansible_doc=ansible_doc)
                         roles_info.append(role_info)
 
             render_readme_template(
@@ -186,19 +198,24 @@ def document_collection_roles(collection_path, playbook, graph, no_backup, no_do
 @click.option('--repository-url', '-ru', default=None, help='Repository base URL (used for standalone roles)')
 @click.option('--repo-type', '-rt', default=None, help='Repository type: github, gitlab, gitea, etc.')
 @click.option('--repo-branch', '-rb', default=None, help='Repository branch name (e.g., main or master)')
+@click.option('--ansible-doc', default=None, help='Path to the file generated with ansible-doc --list --json.')
 @click.version_option(version=get_version(), help=f"Show the module version. Actual is {get_version()}")
-def doc_the_role(role, collection, playbook, graph, no_backup, no_docsible, comments, task_line, md_collection_template, md_role_template, append, output, repository_url, repo_type, repo_branch):
+def doc_the_role(role, collection, playbook, graph, no_backup, no_docsible, comments, task_line, md_collection_template, md_role_template, append, output, repository_url, repo_type, repo_branch, ansible_doc):
     if collection:
         collection_path = os.path.abspath(collection)
         if not os.path.exists(collection_path) or not os.path.isdir(collection_path):
             print(f"Folder {collection_path} does not exist.")
             return
         document_collection_roles(collection_path, playbook, graph, no_backup, no_docsible, comments, task_line,
-                                  md_collection_template, md_role_template, append, output, repository_url, repo_type, repo_branch)
+                                  md_collection_template, md_role_template, append, output, repository_url, repo_type, repo_branch, ansible_doc=ansible_doc)
     elif role:
         role_path = os.path.abspath(role)
         if not os.path.exists(role_path) or not os.path.isdir(role_path):
             print(f"Folder {role_path} does not exist.")
+            return
+
+        if ansible_doc and not os.path.exists(ansible_doc):
+            print(f"File {ansible_doc} does not exist.")
             return
 
         if playbook == 'tests/test.yml':
@@ -214,12 +231,12 @@ def doc_the_role(role, collection, playbook, graph, no_backup, no_docsible, comm
             except Exception as e:
                 print('playbook import error:', e)
         document_role(role_path, playbook_content, graph, no_backup, no_docsible, comments, task_line, md_role_template, belongs_to_collection=False,
-                      append=append, output=output, repository_url=repository_url, repo_type=repo_type, repo_branch=repo_branch)
+                      append=append, output=output, repository_url=repository_url, repo_type=repo_type, repo_branch=repo_branch, ansible_doc=ansible_doc)
     else:
         print("Please specify either a role or a collection path.")
 
 
-def document_role(role_path, playbook_content, generate_graph, no_backup, no_docsible, comments, task_line, md_role_template, belongs_to_collection, append, output, repository_url, repo_type, repo_branch):
+def document_role(role_path, playbook_content, generate_graph, no_backup, no_docsible, comments, task_line, md_role_template, belongs_to_collection, append, output, repository_url, repo_type, repo_branch, ansible_doc=None):
     role_name = os.path.basename(role_path)
     readme_path = os.path.join(role_path, output)
     meta_path = os.path.join(role_path, "meta", "main.yml")
@@ -247,17 +264,25 @@ def document_role(role_path, playbook_content, generate_graph, no_backup, no_doc
     vars_data = load_yaml_files_from_dir_custom(
         os.path.join(role_path, "vars")) or []
 
+    try:
+        git_info = get_repo_info(role_path) or {}
+    except Exception as e:
+        print(f"[WARN] Could not get Git info: {e}")
+        git_info = {}
+
+    repo_commit = git_info.get("commit") if git_info else None
+
     if repository_url == "detect":
-        try:
-            git_info = get_repo_info(role_path) or {}
-        except Exception as e:
-            print(f"[WARN] Could not get Git info: {e}")
-            git_info = {}
         repository_url = git_info.get("repository") if git_info else None
         repo_branch = repo_branch or (
             git_info.get("branch") if git_info else "main")
         repo_type = repo_type or (
             git_info.get("repository_type") if git_info else None)
+
+    ansible_doc_content = {}
+    if ansible_doc:
+        with open(ansible_doc, 'r', encoding='utf-8') as f_in:
+            ansible_doc_content = json.load(f_in)
 
     role_info = {
         "name": role_name,
@@ -272,44 +297,56 @@ def document_role(role_path, playbook_content, generate_graph, no_backup, no_doc
         "repository": repository_url,
         "repository_type": repo_type,
         "repository_branch": repo_branch,
-        "argument_specs": argument_specs
+        "repo_commit": repo_commit,
+        "argument_specs": argument_specs,
+        "ansible_doc": ansible_doc_content,
     }
 
     tasks_dir = os.path.join(role_path, "tasks")
     role_info["tasks"] = []
 
     if os.path.exists(tasks_dir) and os.path.isdir(tasks_dir):
+        list_of_task_files = []
+        task_main = None
         for dirpath, dirnames, filenames in os.walk(tasks_dir):
             for task_file in filenames:
                 if task_file.endswith(".yml") or task_file.endswith(".yaml"):
                     file_path = os.path.join(dirpath, task_file)
-                    tasks_data = load_yaml_generic(file_path)
-                    if tasks_data:
-                        relative_path = os.path.relpath(file_path, tasks_dir)
-                        task_info = {'file': relative_path,
-                                     'tasks': [], 'mermaid': [], "comments": [], 'lines': []}
-                        if comments:
-                            task_info['comments'] = get_task_comments(
-                                file_path)
-                        if task_line:
-                            task_info['lines'] = get_task_line_numbers(
-                                file_path)
-                        if not isinstance(tasks_data, list):
-                            print(
-                                f"Unexpected data type for tasks in {task_file}. Skipping.")
-                            continue
-                        for task in tasks_data:
-                            if not isinstance(task, dict):
-                                print(
-                                    f"Skipping unexpected data in {task_file}: {task}")
-                                continue
-                            if task and len(task.keys()) > 0:
-                                processed_tasks = process_special_task_keys(
-                                    task)
-                                task_info['tasks'].extend(processed_tasks)
-                                task_info['mermaid'].extend([task])
+                    list_of_task_files.append(file_path)
+                    if task_file == "main.yml":
+                        task_main = file_path
 
-                        role_info["tasks"].append(task_info)
+        list_of_task_files = sorted(list_of_task_files)
+        if task_main:
+            list_of_task_files.remove(task_main)
+            list_of_task_files.insert(0, task_main)
+
+        for file_path in list_of_task_files:
+            task_file = os.path.basename(file_path)
+            tasks_data = load_yaml_generic(file_path)
+            if tasks_data:
+                relative_path = os.path.relpath(file_path, tasks_dir)
+                task_info = {'file': relative_path,
+                             'tasks': [], 'mermaid': [], "comments": [], 'lines': []}
+                if comments:
+                    task_info['comments'] = get_task_comments(file_path)
+                if task_line:
+                    task_info['lines'] = get_task_line_numbers(file_path)
+                if not isinstance(tasks_data, list):
+                    print(
+                        f"Unexpected data type for tasks in {task_file}. Skipping.")
+                    continue
+                for task in tasks_data:
+                    if not isinstance(task, dict):
+                        print(
+                            f"Skipping unexpected data in {task_file}: {task}")
+                        continue
+                    if task and len(task.keys()) > 0:
+                        processed_tasks = process_special_task_keys(task)
+                        task_info['tasks'].extend(processed_tasks)
+                        task_info['mermaid'].extend([task])
+
+                role_info["tasks"].append(task_info)
 
     if os.path.exists(readme_path):
         if not no_backup:
@@ -327,13 +364,18 @@ def document_role(role_path, playbook_content, generate_graph, no_backup, no_doc
 
     # Render the static template
     if md_role_template:
+        md_role_template = os.path.abspath(md_role_template)
         template_dir = os.path.dirname(md_role_template)
         template_file = os.path.basename(md_role_template)
         env = Environment(loader=FileSystemLoader(template_dir))
-        template = env.get_template(template_file)
     else:
-        env = Environment(loader=BaseLoader)
-        template = env.from_string(static_template)
+        env = Environment(loader=FileSystemLoader(os.path.dirname(os.path.abspath(__file__))))
+        template_file = None
+
+    env.filters['type_debug'] = type_debug
+    env.filters['to_yaml'] = to_yaml
+
+    template = env.get_template(template_file) if template_file else env.from_string(static_template)
     new_content = template.render(
         role=role_info, mermaid_code_per_file=mermaid_code_per_file)
     new_content = manage_docsible_tags(new_content)

@@ -40,7 +40,12 @@ def process_special_task_keys(task, task_type='task'):
                 'name': escape_pipes(task_name),
                 'module': task_module,
                 'type': block_type,
-                'when': task_when
+                'when': task_when,
+                'failed_when': None,
+                'args': {},
+                'vars': {},
+                'notify': [],
+                'register': None,
             })
             for sub_task in task[block_type]:
                 processed_tasks = process_special_task_keys(
@@ -51,6 +56,8 @@ def process_special_task_keys(task, task_type='task'):
     # Handle regular tasks
     task_name = task.get('name', 'Unnamed')
     task_when = escape_pipes(task.get('when', None))
+    task_failed_when = escape_pipes(task.get('failed_when', None))
+    tasks_register = task.get('register', None)
 
     # Determine module name based on known task indicators or default to 'unknown'
     task_module = 'unknown'  # Default module if not found
@@ -74,10 +81,24 @@ def process_special_task_keys(task, task_type='task'):
                        if key not in known_task_params and not key.startswith('with_')]
         task_module = module_keys[0] if module_keys else 'unknown'
 
+    # Catch meta handlers (e.g. `meta: flush_handlers`)
+    if task_module == 'unknown':
+        module_keys = [task[key] for key in task.keys() if key == 'meta']
+        task_module = module_keys[0] if module_keys else 'unknown'
+
+    tasks_notify = task.get('notify', [])
+    if not isinstance(tasks_notify, list):
+        tasks_notify = [tasks_notify]
+
     tasks.append({
         'name': escape_pipes(task_name),
         'module': task_module if task_module != 'unknown' else '',  # Blank if unknown
         'type': task_type,
-        'when': task_when
+        'when': task_when,
+        'failed_when': task_failed_when,
+        'args': task.get(task_module, {}),
+        'vars': task.get('vars', {}),
+        'notify': tasks_notify,
+        'register': tasks_register,
     })
     return tasks

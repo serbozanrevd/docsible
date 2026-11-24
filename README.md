@@ -26,6 +26,10 @@ Docsible is a command-line interface (CLI) written in Python that automates the 
 - Generates a well-structured table for default and role-specific variables
 - Support for encrypted Ansible Vault variables
 - Gracefully handles `!unsafe` Ansible YAML tag
+- Enriched task metadata: captures `args`, `vars`, `notify`, `register`, `failed_when` per task
+- Task files ordered with `main.yml` first, then alphabetically
+- Auto-detects and embeds the current Git commit SHA in generated docs
+- Optional `--ansible-doc` flag to include module descriptions from `ansible-doc --list --json`
 
 ## Installation
 
@@ -60,6 +64,12 @@ docsible --collection ./collections_tests/lucian/ --no-backup --graph
 docsible --role /path/to/ansible/role # without include a playbook into readme
 ```
 
+### With ansible-doc module descriptions and auto-detected repository info
+```bash
+ansible-doc --list --json > ansible_verbiage.json
+docsible --role /path/to/ansible/role --repository-url detect --ansible-doc ansible_verbiage.json
+```
+
 ```bash
 $ docsible --help
 Usage: docsible [OPTIONS]
@@ -81,7 +91,8 @@ Options:
   -ru, --repository-url TEXT      Repository base URL (used for standalone roles)
   -rt, --repo-type TEXT           Repository type: github, gitlab, gitea, etc.
   -rb, --repo-branch TEXT         Repository branch name (e.g., main or master)
-  --version                       Show the module version. Actual is 0.7.17
+  --ansible-doc TEXT              Path to file generated with ansible-doc --list --json
+  --version                       Show the module version. Actual is 0.8.0
   --help                          Show this message and exit.
 ```
 
@@ -101,6 +112,7 @@ Options:
 - `--repository-url`: Repository base URL (used for standalone roles). Use `detect` to auto-detect using Git, or provide a full URL.
 - `--repo-type`: Repository type: github, gitlab, gitea, etc. (Optional but needed if `detect` is not used with `--repository-url`).
 - `--repo-branch`: Repository branch name (e.g., main or master). (Optional but needed if `detect` is not used with `--repository-url`).
+- `--ansible-doc`: Path to a JSON file generated with `ansible-doc --list --json`. When provided, module short descriptions are made available to custom templates via `role.ansible_doc`. (Optional)
 - `--version`: Show the current module version and exit.
 - `--help`: Show this message and exit.
 

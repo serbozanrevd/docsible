@@ -71,6 +71,7 @@ def clean_and_standardize_url(url: str) -> str:
 def get_repo_info(path: str | Path) -> Dict[str, str]:
     dir_path = str(path)
     timeout = 5
+    commit = None
 
     try:
         is_repo_check = subprocess.run(
@@ -87,6 +88,11 @@ def get_repo_info(path: str | Path) -> Dict[str, str]:
 
         branch = subprocess.run(
             ["git", "-C", dir_path, "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, check=True, timeout=timeout
+        ).stdout.strip()
+
+        commit = subprocess.run(
+            ["git", "-C", dir_path, "rev-parse", "HEAD"],
             capture_output=True, text=True, check=True, timeout=timeout
         ).stdout.strip()
 
@@ -115,4 +121,5 @@ def get_repo_info(path: str | Path) -> Dict[str, str]:
         "repository": repository_url,
         "branch": branch,
         "repository_type": repo_type,
+        "commit": commit,
     }
